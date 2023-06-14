@@ -1,6 +1,6 @@
-from biosegment.GMM.preprocess import extract_lfcc, extract_mfcc
-from biosegment.GMM.GMM_breath import GMMClassifier, ClassifierValidator, VectorDataSource
-from biosegment.GMM.hparams import *
+from .preprocess import extract_lfcc, extract_mfcc
+from .GMM_breath import GMMClassifier, ClassifierValidator, VectorDataSource
+from .hparams import *
 import pickle
 from auditok import DataValidator, ADSFactory, DataSource, StreamTokenizer, BufferAudioSource, player_for
 import soundfile as sf

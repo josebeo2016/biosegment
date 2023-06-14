@@ -1,18 +1,16 @@
-from biosegment.CNN.preprocess import extract_lfcc, extract_mfcc
-from biosegment.CNN.CNN_breath import BIOTYPE, CNNClassifier, VectorDataSource, FeatLoader
+from .preprocess import extract_lfcc, extract_mfcc
+from .CNN_breath import BIOTYPE, CNNClassifier, VectorDataSource, FeatLoader
 from torch.utils.data import Dataset
 import os
 import librosa
 import torch
 import time
 
-
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-
-# if __name__ == '__main__':
 
 # load models
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# print(device)
 classifier = CNNClassifier(os.path.join(BASE_DIR, "out", "cnn.pth"), device=device)
 biotype = BIOTYPE
 
@@ -52,7 +50,6 @@ def wav2bio(data, sr):
     # print(f"Running time 2: {running_time:.2f} seconds")
     # result = classifier.predict(data_list)
     # assert result1 == result2
-
     return result2
 
 if __name__ == '__main__':
