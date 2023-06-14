@@ -95,8 +95,8 @@ class CNNClassifier():
             x = x.unsqueeze(0)
             logits = self.model(x)
             out = logits.argmax(dim=-1).cpu().numpy()[0]
-
-            return out
+        torch.cuda.empty_cache()
+        return out
     def predict_batch(self, data_list: list, batch_size = 32):
         with torch.no_grad():
             data = FeatLoaderEval(data_list)
@@ -107,8 +107,9 @@ class CNNClassifier():
                 logits = self.model(batch)
                 out = logits.argmax(dim=-1)
                 res.append(out)
-                
-            return torch.cat(res, dim=0).cpu().tolist()
+
+        torch.cuda.empty_cache()
+        return torch.cat(res, dim=0).cpu().tolist()
 
 class VectorDataSource(DataSource):
      
