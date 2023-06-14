@@ -1,10 +1,11 @@
-from .preprocess import extract_lfcc, extract_mfcc
-from .GMM_breath import GMMClassifier, ClassifierValidator, VectorDataSource
-from .hparams import *
+from biosegment.GMM.preprocess import extract_lfcc, extract_mfcc
+from biosegment.GMM.GMM_breath import GMMClassifier, ClassifierValidator, VectorDataSource
+from biosegment.GMM.hparams import *
 import pickle
 from auditok import DataValidator, ADSFactory, DataSource, StreamTokenizer, BufferAudioSource, player_for
 import soundfile as sf
 import os
+import librosa
 
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -43,6 +44,8 @@ tokenizer = StreamTokenizer(validator=breath_validator, min_length=int(min_seg_l
 
 def wav2bio(data, sr):
     # data, sr = sf.read(wav_path)
+    if (sr!=16000):
+        data = librosa.resample(data, sr, 16000)
     lfcc = VectorDataSource(data=extract_lfcc(sig=data,sr=sr),scope=15)   
     # tokenized:
     lfcc.rewind()

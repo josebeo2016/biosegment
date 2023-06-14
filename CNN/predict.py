@@ -1,5 +1,5 @@
-from CNN.preprocess import extract_lfcc, extract_mfcc
-from CNN.CNN_breath import BIOTYPE, CNNClassifier, VectorDataSource, FeatLoader
+from biosegment.CNN.preprocess import extract_lfcc, extract_mfcc
+from biosegment.CNN.CNN_breath import BIOTYPE, CNNClassifier, VectorDataSource, FeatLoader
 from torch.utils.data import Dataset
 import os
 import librosa
