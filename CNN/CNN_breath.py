@@ -1,15 +1,6 @@
-from json.tool import main
-import wave
-import pickle
 import numpy as np
 import pandas as pd
-import argparse
-from sklearn import mixture
-from numpy import log, exp, infty, zeros_like, vstack, zeros, errstate, finfo, sqrt, floor, tile, concatenate, arange, meshgrid, ceil, linspace
-from scipy.signal import lfilter
-import soundfile as sf
 import logging
-from LFCC_pipeline import lfcc
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset
@@ -19,10 +10,7 @@ import torch.optim as optim
 from torch import Tensor
 from tqdm import tqdm
 import sys
-import librosa
-from auditok import DataValidator, ADSFactory, DataSource, StreamTokenizer, BufferAudioSource, player_for
-import h5py
-from sklearn.model_selection import train_test_split
+from auditok import DataSource
 import os
 logging.basicConfig(format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
 """
@@ -95,15 +83,32 @@ class CNNClassifier():
     def __init__(self, model_path, device='cpu'):
         self.model = M5()
         self.model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
+        self.model = self.model.to(device)
         self.model.eval()
         self.device = device
     
     def predict(self, x):
         with torch.no_grad():
-            x = torch.tensor(x, dtype=torch.float32)
+            x = pad(x, max_len=30)
             x = x.to(self.device)
+            # add batch dim
+            x = x.unsqueeze(0)
             logits = self.model(x)
-            return logits.argmax(dim=-1).cpu().numpy()
+            out = logits.argmax(dim=-1).cpu().numpy()[0]
+
+            return out
+    def predict_batch(self, data_list: list, batch_size = 32):
+        with torch.no_grad():
+            data = FeatLoaderEval(data_list)
+            data_loader = DataLoader(data, batch_size=32, shuffle=False)
+            res = []
+            for batch in data_loader:
+                batch = batch.to(self.device)
+                logits = self.model(batch)
+                out = logits.argmax(dim=-1)
+                res.append(out)
+                
+            return torch.cat(res, dim=0).cpu().tolist()
 
 class VectorDataSource(DataSource):
      
@@ -131,25 +136,29 @@ class VectorDataSource(DataSource):
     def rewind(self):
         self._current = 0
 
-def pad(x, max_len=30):
-    x_len = x.shape[0]
-    if x_len >= max_len:
-        return x[:max_len]
-    # need to pad
-    num_repeats = int(max_len / x_len)+1
-    padded_x = np.tile(x, (1, num_repeats,1))[:, :max_len, :][0]
-    return padded_x
+def label_to_index(label: str):
+    return BIOTYPE[label]
+
 def repeat_padding_Tensor(spec, ref_len):
     mul = int(np.ceil(ref_len / spec.shape[0]))
     spec = spec.repeat(mul, 1)[:ref_len, :]
     return spec
 
-def label_to_index(label: str):
-    return BIOTYPE[label]
+def pad(feat, max_len=30):
+    this_feat_len = feat.shape[0]
+    featureTensor = Tensor(feat)
+    # padding
+    if this_feat_len > max_len:
+        startp = np.random.randint(this_feat_len - max_len)
+        featureTensor = featureTensor[startp:startp + max_len, :]
 
+    if this_feat_len < max_len:
+        featureTensor = repeat_padding_Tensor(featureTensor, max_len)
+        
+    return featureTensor
 
 class FeatLoader(Dataset):
-    def __init__(self, data, feat_len = 30):
+    def __init__(self, data: pd.DataFrame, feat_len = 30):
         self.data = data
         self.feat_len = feat_len
     def __len__(self):
@@ -157,17 +166,21 @@ class FeatLoader(Dataset):
     
     def __getitem__(self, index):
         feat = self.data['features'][index]
-        this_feat_len = feat.shape[0]
-        featureTensor = Tensor(feat)
-        # padding
-        if this_feat_len > self.feat_len:
-            startp = np.random.randint(this_feat_len - self.feat_len)
-            featureTensor = featureTensor[startp:startp + self.feat_len, :]
-
-        if this_feat_len < self.feat_len:
-            featureTensor = repeat_padding_Tensor(featureTensor, self.feat_len)
+        featureTensor = pad(feat, self.feat_len)
         y = label_to_index(self.data['class'][index])
         return featureTensor, y
+
+class FeatLoaderEval(Dataset):
+    def __init__(self, data: list, feat_len = 30):
+        self.data = data
+        self.feat_len = feat_len
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, index):
+        feat = self.data[index]
+        featureTensor = pad(feat, self.feat_len)
+        return featureTensor
 
 def train(model, epoch, log_interval, device):
     model.train()
