@@ -7,8 +7,8 @@ import torch
 import time
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-# device = 'cuda' if torch.cuda.is_available() else 'cpu'
-device = 'cuda'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# device = 'cuda'
 print(device)
 classifier = CNNClassifier(os.path.join(BASE_DIR, "out", "cnn.pth"), device=device)
 print("Finished loading model")
