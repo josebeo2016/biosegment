@@ -1,15 +1,24 @@
 import pandas as pd
 import numpy as np
 import torch
+import sys
+import os
+import yaml
 
-
-feats = pd.read_hdf('out/feats.h5')
+# python split_lfcc.py config.yaml out/feats.h5 out/
+if len(sys.argv) < 4:
+    print("Usage: python {} config.yaml out/feats.h5 out/".format(sys.argv[0]))
+    exit(1)
+feats = pd.read_hdf(sys.argv[2])
 print(feats)
 new_feats = pd.DataFrame(columns=['fid', 'features', 'class', 'utt'])
-feat_len = 30
+# load config
+config = yaml.load(open(sys.argv[1], 'r'), Loader=yaml.FullLoader)
+feat_len = config['model']['feat_len']
 print(feats.columns)
 for i in feats.index:
     feat = feats['features'][i]
+    print(feat.shape)
     # feat shape: (time, 60)
     if feat.shape[0] > feat_len:
         # devide into segments
@@ -23,4 +32,5 @@ for i in feats.index:
         
 
 print(new_feats)
-new_feats.to_hdf('out/feats_split.h5', key='feats', mode='w')
+print("Saving to {}".format(os.path.join(sys.argv[3], 'feats_split.h5')))
+new_feats.to_hdf(os.path.join(sys.argv[3], 'feats_split.h5'), key='feats', mode='w')

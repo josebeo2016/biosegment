@@ -1,12 +1,12 @@
 """
 Size of audio window for which MFCC coefficients are calculated
 """
-ANALYSIS_WINDOW = 0.02 # 0.02 second = 20 ms
+ANALYSIS_WINDOW = 0.03 # 0.02 second = 20 ms
 
 """
 Step of ANALYSIS_WINDOW 
 """
-ANALYSIS_STEP = 0.01 # 0.01 second overlap between consecutive windows
+ANALYSIS_STEP = 0.015 # 0.01 second overlap between consecutive windows
 
 """
 number of vectors around the current vector to return.

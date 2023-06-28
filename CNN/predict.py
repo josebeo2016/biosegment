@@ -5,19 +5,21 @@ import os
 import librosa
 import torch
 import time
+import yaml
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # device = 'cuda'
 print(device)
-classifier = CNNClassifier(os.path.join(BASE_DIR, "out", "cnn.pth"), device=device)
+config = yaml.load(open(os.path.join(BASE_DIR, "data_old.yaml"), "r"), Loader=yaml.FullLoader)
+classifier = CNNClassifier(os.path.join(BASE_DIR, "out_bk", "cnn.pth"), config, device=device)
 print("Finished loading model")
 
-def wav2bio(data, sr):
+def wav2bio(data, sr, class_weight=[1,5,5], scope=15):
     # resample to 16000
     if (sr!=16000):
         data = librosa.resample(data, sr, 16000)
-    lfcc = VectorDataSource(data=extract_lfcc(sig=data,sr=16000),scope=15)   
+    lfcc = VectorDataSource(data=extract_lfcc(sig=data,**config['lfcc']),scope=scope)   
     # # tokenized:
     # lfcc.rewind()
     
@@ -44,7 +46,7 @@ def wav2bio(data, sr):
         data = lfcc.read()
     # print(len(data_list))
     # print(len(data_list))
-    result2 = classifier.predict_batch(data_list, batch_size=256)
+    result2 = classifier.predict_batch(data_list, class_weight=class_weight,batch_size=256)
     # print("Finished predicting")
     # end_time = time.time()
     # running_time = end_time - start_time

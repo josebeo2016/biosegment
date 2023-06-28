@@ -9,11 +9,11 @@ import numpy as np
 
 def lfcc(sig,
          fs=16000,
-         num_ceps=20,
+         num_ceps=40,
          pre_emph=0,
          pre_emph_coeff=0.97,
-         win_len=0.030,
-         win_hop=0.015,
+         win_len=0.040,
+         win_hop=0.020,
          win_type="hamming",
          nfilts=70,
          nfft=1024,
@@ -61,6 +61,8 @@ def lfcc(sig,
     Returns:
         (array) : 2d array of LFCC features (num_frames x num_ceps)
     """
+    # Debug config load
+    # print("LFCC config: num_ceps {}".format(num_ceps))
     # init freqs
     high_freq = high_freq or fs / 2
     low_freq = low_freq or 0
@@ -82,7 +84,8 @@ def lfcc(sig,
                                    fs=fs,
                                    win_len=win_len,
                                    win_hop=win_hop)
-
+    # print(frames.shape)
+    # print(frame_length)
     # -> windowing
     windows = windowing(frames=frames,
                         frame_len=frame_length,
@@ -106,5 +109,4 @@ def lfcc(sig,
 
     #  -> DCT(.)
     lfccs=dct(log_features, type=dct_type, norm='ortho', axis=1)[:, :num_ceps ]
-
     return lfccs
