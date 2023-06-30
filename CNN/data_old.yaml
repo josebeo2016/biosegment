@@ -18,12 +18,14 @@ lfcc:
 model:
   name: "M5"
   params:
-    n_input: 1
-    n_output: 3
     n_channel: 32
+    n_output: 3
     stride: 1
+    h_in: 30 
+    w_in: 60
   lr: 0.001
   weight_decay: 0.0001
   n_epoch: 50
   batch_size: 32
   feat_len: 30
+  padding_type: "repeat"

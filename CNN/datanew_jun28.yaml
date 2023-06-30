@@ -24,6 +24,7 @@ model:
   lr: 0.001
   weight_decay: 0.0001
   n_epoch: 50
+  padding_type: "zero"
   params:
     num_conv_layers: 2
     num_channels: 32
@@ -32,3 +33,5 @@ model:
     hidden_size: 128
     num_classes: 3
     stride: 1
+    h_in: 30 # feat_len
+    w_in: 120 # num_ceps*(order_deltas+1)

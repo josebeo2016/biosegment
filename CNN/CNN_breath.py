@@ -26,7 +26,7 @@ BIOTYPE = {
 # https://pytorch.org/tutorials/intermediate/speech_command_classification_with_torchaudio_tutorial.html
 
 class M5(nn.Module):
-    def __init__(self, n_input=1, n_output=3, stride=1, n_channel=32):
+    def __init__(self, n_input=1, n_output=3, stride=1, n_channel=32, h_in=30, w_in=120):
         super().__init__()
         self.conv1 = nn.Conv2d(n_input, n_channel, kernel_size=3, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(n_channel)
@@ -41,7 +41,8 @@ class M5(nn.Module):
         self.bn4 = nn.BatchNorm2d(2 * n_channel)
         self.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.avgpool = nn.AvgPool2d(kernel_size=(2, 2))
-        self.fc1 = nn.Linear(4 * n_channel, 2* n_channel)
+        
+        self.fc1 = nn.Linear( 2 * int(w_in/h_in) * n_channel, 2* n_channel)
         self.fc2 = nn.Linear(2 * n_channel, n_output)
 
     def forward(self, x):
@@ -116,6 +117,8 @@ class LCNN(nn.Module):
         x = F.log_softmax(x, dim=1)
         return x
 
+
+
 class CNNClassifier():
     def __init__(self, model_path, config, device='cpu'):
         
@@ -125,12 +128,13 @@ class CNNClassifier():
         self.model.eval()
         self.device = device
         self.feat_len = config['model']['feat_len']
+        self.padding_type = config['model']['padding_type']
     
     def predict(self, x, class_weight: list=[1,1,1]):
         # convert list to tensor
         class_weight = torch.tensor(class_weight).to(self.device)
         with torch.no_grad():
-            x = pad(x, max_len=30)
+            x = pad(x,padding_type=self.padding_type,max_len=self.feat_len)
             x = x.to(self.device)
             # add batch dim
             x = x.unsqueeze(0)
@@ -215,7 +219,11 @@ def zero_padding_Tensor(spec, ref_len):
         spec = spec[:ref_len, :]
     return spec
 
-def pad(feat, max_len=30):
+def pad(feat, padding_type = 'zero',max_len=30):
+    """
+    padding_type: zero or repeat
+    """
+    assert padding_type in ['zero', 'repeat']
     this_feat_len = feat.shape[0]
     featureTensor = Tensor(feat)
     # padding
@@ -224,66 +232,41 @@ def pad(feat, max_len=30):
         featureTensor = featureTensor[startp:startp + max_len, :]
 
     if this_feat_len < max_len:
-        # featureTensor = repeat_padding_Tensor(featureTensor, max_len)
-        # PHUCDT move to zero padding for CNN
-        featureTensor = zero_padding_Tensor(featureTensor, max_len)
+        if padding_type == 'repeat':
+            featureTensor = repeat_padding_Tensor(featureTensor, max_len)
+        if padding_type == 'zero':
+            featureTensor = zero_padding_Tensor(featureTensor, max_len)
     return featureTensor
 
-def pad_sequence(sequences, batch_first=False, padding_value=0.0):
-    max_size = sequences[0].size()
-    trailing_dims = max_size[1:]
-    max_len = len(sequences)
-    if batch_first:
-        out_dims = (max_len,) + trailing_dims
-    else:
-        out_dims = trailing_dims + (max_len,)
-    out_tensor = sequences[0].data.new(*out_dims).fill_(padding_value)
-    for i, tensor in enumerate(sequences):
-        length = tensor.size(0)
-        # use index notation to prevent duplicate references to the tensor
-        if batch_first:
-            out_tensor[i, :length, ...] = tensor
-        else:
-            out_tensor[..., i, :length] = tensor
-    return out_tensor
-
-    
-    
-
 class FeatLoader(Dataset):
-    def __init__(self, data: pd.DataFrame, feat_len = 30):
+    def __init__(self, data: pd.DataFrame, padding_type: str="zero", feat_len = 30):
         self.data = data
         self.feat_len = feat_len
+        self.padding_type = padding_type
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, index):
         feat = self.data['features'][index]
-        feat = pad(feat, max_len=self.feat_len)
+        feat = pad(feat,padding_type=self.padding_type,max_len=self.feat_len)
         y = label_to_index(self.data['class'][index])
         return feat, y
     
-    # def collate_fn(self, batch):
-    # # padding as the max length
-    #     features, labels = zip(*batch)
-    #     featureTensor = pad_sequence(features, batch_first=True)
-    #     return featureTensor, torch.tensor(labels)
 
 
 class FeatLoaderEval(Dataset):
-    def __init__(self, data: list, feat_len = 30):
+    def __init__(self, data: list, padding_type: str="zero", feat_len = 30):
         self.data = data
         self.feat_len = feat_len
+        self.padding_type = padding_type
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, index):
         feat = self.data[index]
-        feat = pad(feat, max_len=self.feat_len)
+        feat = pad(feat,padding_type=self.padding_type,max_len=self.feat_len)
         return feat
-    # def collate_fn(self, batch):
-    #     featureTensor = pad_sequence(batch, batch_first=True)
-    #     return featureTensor
+
 
 def train(model, epoch, log_interval, device):
     model.train()

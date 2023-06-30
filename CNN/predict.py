@@ -11,8 +11,8 @@ BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # device = 'cuda'
 print(device)
-config = yaml.load(open(os.path.join(BASE_DIR, "data_old.yaml"), "r"), Loader=yaml.FullLoader)
-classifier = CNNClassifier(os.path.join(BASE_DIR, "out_bk", "cnn.pth"), config, device=device)
+config = yaml.load(open(os.path.join(BASE_DIR, "datanew_jun30.yaml"), "r"), Loader=yaml.FullLoader)
+classifier = CNNClassifier(os.path.join(BASE_DIR, "out_datanewjun30", "cnn.pth"), config, device=device)
 print("Finished loading model")
 
 def wav2bio(data, sr, class_weight=[1,5,5], scope=15):
