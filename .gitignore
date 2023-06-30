@@ -167,5 +167,4 @@ test/
 CMEval/
 
 #model files
-*.pth
 *.cpython-39.pyc
