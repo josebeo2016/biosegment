@@ -17,6 +17,9 @@ print("Finished loading model")
 
 def wav2bio(data, sr, class_weight=[1,5,5], scope=15):
     # resample to 16000
+    # convert to numpy array
+    if (type(data) is torch.Tensor):
+        data = data.numpy()
     if (sr!=16000):
         data = librosa.resample(data, sr, 16000)
     lfcc = VectorDataSource(data=extract_lfcc(sig=data,**config['lfcc']),scope=scope)   
