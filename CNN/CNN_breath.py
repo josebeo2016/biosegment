@@ -49,6 +49,10 @@ class M5(nn.Module):
         # input shape: (batch_size, n_time, n_channel)
         x = x.unsqueeze(1) # (batch_size, 1, n_time, n_channel)
         x = x.permute(0, 1, 3, 2) # (batch_size, 1, n_channel, n_time)
+        # # check device of conv layers
+        # print("self.conv1 device {}".format(next(self.conv1.parameters()).device))
+        # # check device of input
+        # print("x device {}".format(x.device))
         x = self.conv1(x)
         x = F.relu(self.bn1(x))
         x = self.pool1(x)
@@ -123,10 +127,11 @@ class CNNClassifier():
     def __init__(self, model_path, config, device='cpu'):
         
         self.model = globals()[config['model']['name']](**config['model']['params'])
-        self.model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
-        self.model = self.model.to(device)
+        self.model.load_state_dict(torch.load(model_path))
+        # self.model = self.model.to(device)
         self.model.eval()
         self.device = device
+        self.model.to(device)
         self.feat_len = config['model']['feat_len']
         self.padding_type = config['model']['padding_type']
     
@@ -152,6 +157,31 @@ class CNNClassifier():
             res = []
             for batch in data_loader:
                 batch = batch.to(self.device)
+                self.model.to(self.device)
+                logits = self.model(batch)
+                weighted_logits = logits * class_weight.unsqueeze(0)
+                out = weighted_logits.argmax(dim=-1)
+                res.append(out)
+
+        torch.cuda.empty_cache()
+        return torch.cat(res, dim=0).cpu().tolist()
+    
+    def predict_batch2(self, data_list: list, device, class_weight: list=[1,1,1], batch_size = 32):
+        # convert list to tensor
+        # print("device {}".format(device))
+        class_weight = torch.tensor(class_weight).to(device)
+        
+        with torch.no_grad():
+            data = FeatLoaderEval(data_list, feat_len=self.feat_len)
+            data_loader = DataLoader(data, batch_size=32, shuffle=False)
+            res = []
+            for batch in data_loader:
+                batch = batch.to(device)
+                self.model.to(device)
+                # if next(self.model.parameters()).device != batch.device \
+                #     or next(self.model.parameters()).dtype != batch.dtype:
+                #         self.model.to(batch.device, dtype=batch.dtype)
+                
                 logits = self.model(batch)
                 weighted_logits = logits * class_weight.unsqueeze(0)
                 out = weighted_logits.argmax(dim=-1)
