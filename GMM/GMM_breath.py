@@ -7,10 +7,15 @@ import argparse
 from sklearn import mixture
 from numpy import log, exp, infty, zeros_like, vstack, zeros, errstate, finfo, sqrt, floor, tile, concatenate, arange, meshgrid, ceil, linspace
 from scipy.signal import lfilter
-from .hparams import *
+
 import soundfile as sf
 import logging
-from .LFCC_pipeline import lfcc
+try:
+    from hparams import *
+    from LFCC_pipeline import lfcc
+except:
+    from .hparams import *
+    from .LFCC_pipeline import lfcc
 
 import librosa
 from auditok import DataValidator, ADSFactory, DataSource, StreamTokenizer, BufferAudioSource, player_for
