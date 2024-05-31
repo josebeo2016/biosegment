@@ -127,7 +127,7 @@ class CNNClassifier():
     def __init__(self, model_path, config, device='cpu'):
         
         self.model = globals()[config['model']['name']](**config['model']['params'])
-        self.model.load_state_dict(torch.load(model_path))
+        self.model.load_state_dict(torch.load(model_path, map_location=device))
         # self.model = self.model.to(device)
         self.model.eval()
         self.device = device
